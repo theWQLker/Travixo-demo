@@ -46,7 +46,27 @@ Next.js · TypeScript · Supabase (PostgreSQL, row-level security) · Stripe · 
 
 ## Screenshots
 
-Coming: fleet dashboard, machine record, machine dossier PDF, agency switcher.
+Captured from the live application on 30 October 2026, on a demo organisation with fictional data.
+
+**Dashboard:** overdue, upcoming and compliant machines, inspections due in the next 30 days, expected returns.
+
+![TraviXO dashboard](docs/screenshots/dashboard.png)
+
+**Fleet:** every machine with its status, VGP state and agency.
+
+![TraviXO fleet list](docs/screenshots/fleet.png)
+
+**Machine record:** compliance at a glance, check-out from the machine page, quick status changes.
+
+![TraviXO machine record](docs/screenshots/machine-record.png)
+
+**Machine dossier (PDF):** the inspection record generated for the client at check-out.
+
+![TraviXO machine dossier PDF](docs/screenshots/machine-dossier.png)
+
+**Agencies:** one account, several agencies, a switcher in the sidebar.
+
+![TraviXO agency switcher](docs/screenshots/agency-switcher.png)
 
 ---
 
