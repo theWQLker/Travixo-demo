@@ -1,114 +1,68 @@
-# TraviXO Systems
+# TraviXO: equipment tracking and VGP compliance
 
-**QR-based asset tracking and VGP compliance automation for French equipment rental companies.**
+**Product:** [travixosystems.com](https://travixosystems.com) · **Application:** [app.travixosystems.com](https://app.travixosystems.com) · **Portfolio:** [deralis.digital](https://deralis.digital/en/projects)
 
-[travixosystems.com](https://travixosystems.com)
+> This repository holds an early demo from March 2026. The current product is private and is described below.
 
----
-
-## The Problem
-
-French equipment rental companies manage thousands of assets across multiple depots. Every piece of lifting and handling equipment must pass a **VGP inspection** (*Verification Generale Periodique*) mandated by the French Labour Code (Code du Travail, R4323-23 to R4323-27). Missing a deadline means regulatory fines, liability exposure, and potential site shutdowns.
-
-Most operators still track this with spreadsheets. Deadlines slip. Assets go missing. Compliance gaps only surface during DIRECCTE audits — when it's too late.
-
-TraviXO replaces that with a purpose-built SaaS platform: scan a QR code, know the status, never miss an inspection.
+TraviXO is a B2B product I designed and built alone for equipment rental companies in France. It keeps each machine
+linked to its rentals, its documents and its regulatory inspections (VGP), from check-out to return. It is my own
+product, not a commissioned project, and it has no paying customers yet.
 
 ---
 
-## What It Does
+## What the current product does
 
-- **Asset Tracking** — QR code-based real-time tracking across depots and job sites. Scan to check status, location, and compliance in seconds.
-- **VGP Compliance Engine** — Automated inspection scheduling with 30/15/7/1-day email alerts. Tracks inspection results (conforme, conditionnel, non conforme) with full audit history.
-- **Rental System** — Equipment checkout/return tracking with client association and recall notifications for assets due for inspection while on-site.
-- **Bulk Operations** — Import 500+ assets from Excel in under 5 minutes with smart column detection. Generate 500 QR codes as print-ready PDFs in 30 seconds.
-- **Team Management** — Role-based access control (owner, admin, manager, member) with secure email invitations.
-- **Digital Audits** — Full inventory audits with missing asset notifications and PDF export.
-- **Subscription Billing** — Stripe-integrated tiered plans with feature gating.
-- **Multi-language** — French (primary) and English, with full i18n across the application.
+- Identify each machine by QR code; check it out and back in from the machine page or a scan.
+- Link client records to rentals, so an inspection recall reaches the client who has the machine.
+- Schedule VGP inspections with 24 regulatory profiles, chosen per machine rather than guessed.
+- Warn when an inspection falls due before the expected return date.
+- Send VGP alerts per person, with a weekly digest and individual preferences.
+- Produce a machine dossier PDF (inspection record plus certificates) and email it to the client at check-out.
+- Run several agencies under one account, with an agency switcher and per-agency fleet views.
+- Bill on licensed asset capacity through Stripe.
 
----
+## How it is built
 
-## Tech Stack
+Next.js · TypeScript · Supabase (PostgreSQL, row-level security) · Stripe · pdf-lib · Resend · Vercel
 
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Next.js 15 (App Router, Server Components) |
-| **Language** | TypeScript (strict mode) |
-| **Database** | Supabase (PostgreSQL) with Row Level Security |
-| **Auth** | Supabase Auth (email/password, cookie-based sessions) |
-| **Payments** | Stripe (checkout, portal, webhooks) |
-| **Email** | Resend + React Email (transactional templates) |
-| **File Storage** | UploadThing (VGP certificates, bulk QR PDFs) |
-| **Styling** | Tailwind CSS |
-| **State** | React Query (TanStack Query) |
-| **Monitoring** | Sentry (client + server error tracking) |
-| **Hosting** | Vercel |
+- Multi-tenant: every table is scoped to an organisation, and isolation is enforced by row-level security in the
+  database, not only in application code.
+- Billing capacity is enforced by a database trigger; Stripe webhooks are signature-verified and each event is claimed
+  before it is applied, so a retried event cannot be processed twice.
+- 103 database migrations as of October 2026.
 
----
+## How it is verified
 
-## Architecture Highlights
+- **Multi-tenant security audit (September 2026):** critical findings closed one by one, each with evidence and a
+  runbook (billing authority, role gates on billing routes, rental custody writes through database functions only).
+  Follow-up hardening removed permissive insert policies and blocked asset writes for read-only roles.
+- **Behavioural tests against a real PostgreSQL** for row-level security, the role matrix, ownership transfer and
+  cross-tenant access (another organisation's machine dossier returns 404).
+- **Privacy gate:** a static check fails verification if the dossier code reads client, rental or price data, or
+  prints a blanket compliance claim. It is tested against a bad fixture to prove it rejects one.
+- **Load and performance:** a k6 load-test harness and a measured performance pass (parallel dashboard loading,
+  server-side pagination, indexes on uncovered foreign keys).
+- **Read-only production proofs** after each multi-agency database change.
 
-- **Multi-tenant by design** — Every table scoped to `organization_id`. Supabase RLS policies enforce data isolation at the database level, independent of application code.
-- **Server Components first** — Leverages Next.js App Router for reduced client JS bundles. API routes handle server-side operations.
-- **Feature gating** — Subscription tier checks run server-side via RPC. Custom hooks (`useSubscription`, `useOrganization`) provide client-side feature gates.
-- **Security hardened** — CSRF protection via origin verification, per-IP rate limiting (sliding window), Stripe webhook HMAC validation, HSTS with preload, strict CSP headers.
-- **Email automation** — Cron-triggered VGP alert pipeline with deduplication, daily send limits, and per-organization notification preferences.
-- **PDF generation** — Client-side bulk QR code generation (jsPDF) and server-side audit reports.
+## Screenshots
+
+Coming: fleet dashboard, machine record, machine dossier PDF, agency switcher.
 
 ---
 
-## Project Structure
+## What is in this repository
 
-```
-app/
-  (auth)/          # Login, signup, password reset, email verification
-  (dashboard)/     # Protected routes: assets, VGP, audits, settings, team
-  api/             # 60+ API routes: CRUD, Stripe, cron, email
-  scan/            # Public QR code scan endpoint
-components/        # Feature-organized React components
-  assets/          # Asset CRUD, QR generation, Excel import
-  vgp/             # VGP dashboard, schedule management
-  rental/          # Checkout, return, client autocomplete
-  subscription/    # Feature gates, plan cards
-hooks/             # useOrganization, useProfile, useSubscription
-lib/
-  billing/         # Entitlements engine, feature guards
-  email/           # Email service, React Email templates
-  security/        # CSRF, rate limiting
-  supabase/        # Client and server Supabase instances
-  validations/     # Zod schemas for API input validation
-types/             # TypeScript types (database schema, VGP, alerts)
-supabase/
-  migrations/      # SQL migrations (billing, teams, rentals, pilots)
-```
-
----
-
-## Getting Started
+The March 2026 demo of TraviXO: Next.js App Router, Supabase, Stripe, React Email and UploadThing. It predates the
+work described above (multi-agency, machine dossier, capacity billing, the security audit).
 
 ```bash
-# Clone and install
-git clone <repo-url>
-cd travixo-app
 npm install
-
-# Configure environment
-cp .env.example .env.local
-# Fill in your Supabase, Stripe, Resend, and UploadThing credentials
-
-# Run development server
-npm run dev
+cp .env.example .env.local   # Supabase, Stripe, Resend and UploadThing credentials
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Some configuration values are placeholders.
 
 ---
 
-## Built By
-
-Solo-founded and built end-to-end — from database schema to deployment pipeline. Designed for the operational realities of French equipment rental: warehouse environments, field workers scanning with gloves on, and regulatory deadlines that don't wait.
-
----
-
-*This is a portfolio version of the TraviXO codebase. Some configuration values have been replaced with placeholders.*
+Built by [Uwa Chidera Ugboaja](https://github.com/theWQLker) · [deralis.digital](https://deralis.digital)
